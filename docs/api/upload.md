@@ -29,6 +29,23 @@
 | --- | --- | --- | --- | --- | --- |
 | upload | body | file | 예 | max 2048 | 에디터에 드롭/붙여넣은 이미지 파일 1개(multipart). 허용 MIME 은 `jpeg,jpg,png,gif,webp`, 최대 크기는 플러그인 설정 `imageMaxSizeMb`(기본 2MB) 로 결정된다. |
 
+**요청 예시**
+
+```http
+POST /api/plugins/sirsoft-ckeditor5/upload HTTP/1.1
+Host: api.example.com
+Accept: application/json
+Authorization: Bearer {YOUR_TOKEN}
+Content-Type: multipart/form-data; boundary=----G7ExampleBoundary
+
+------G7ExampleBoundary
+Content-Disposition: form-data; name="upload"; filename="example.pdf"
+Content-Type: application/octet-stream
+
+(바이너리 파일 내용)
+------G7ExampleBoundary--
+```
+
 **응답 필드** (`data` 내부)
 
 <!-- 실측 제외: write-method — 응답 필드는 사람이 작성하세요. -->

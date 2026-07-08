@@ -29,6 +29,14 @@
 | --- | --- | --- | --- | --- | --- |
 | hash | path | string | 예 | — | 업로드 시 발급된 12자리 소문자 16진수 이미지 해시(라우트 제약 `[a-f0-9]{12}`). 저장된 `<img src>` 의 마지막 경로 세그먼트로, 이 값으로 서빙할 이미지를 조회한다. |
 
+**요청 예시**
+
+```http
+GET /api/plugins/sirsoft-ckeditor5/images/a1b2c3d4e5f6 HTTP/1.1
+Host: api.example.com
+Accept: application/json
+```
+
 **응답 필드** (`data` 내부)
 
 <!-- 실측 제외: unresolved-path-param — 응답 필드는 사람이 작성하세요. -->
