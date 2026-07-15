@@ -48,18 +48,34 @@ Content-Type: application/octet-stream
 
 **응답 필드** (`data` 내부)
 
-<!-- 실측 제외: side-effectful-write — 응답 필드는 사람이 작성하세요. -->
+_이 엔드포인트는 표준 envelope(`success`/`message`/`data`)를 사용하지 않습니다. CKEditor5 SimpleUploadAdapter 규격상 성공 시 HTTP 201 + 최상위 `url` 키만 반환합니다 (`data` 래핑 없음)._
+
+| 필드 | 타입 | 실측 예시값 | 용도/설명 |
+| --- | --- | --- | --- |
+| url | string | `/api/plugins/sirsoft-ckeditor5/images/a1b2c3d4e5f6` | 업로드된 이미지의 서빙 URL. 모델 접근자 `download_url` 이 생성하며 `/api/plugins/sirsoft-ckeditor5/images/{hash}` (hash = 12자리 hex) 형식이다. CKEditor 가 이 값을 그대로 `<img src>` 에 삽입한다. |
+
+실패 시에는 최상위 `error.message` 만 반환합니다 (아래 에러 응답 표 참조).
+
+| 필드 | 타입 | 실측 예시값 | 용도/설명 |
+| --- | --- | --- | --- |
+| error.message | string | `이미지 파일만 업로드할 수 있습니다.` | 검증/권한/서버 오류 사유 (다국어 처리된 단일 메시지). CKEditor 가 에디터 UI 의 알림 문구로 표시한다. |
 
 **응답 예시**
 
-<!-- 실측 제외: side-effectful-write — 응답 예시는 사람이 작성하세요. -->
+```json
+{
+    "url": "/api/plugins/sirsoft-ckeditor5/images/a1b2c3d4e5f6"
+}
+```
 
 **에러 응답**
 
 | 상태코드 | 의미 | 발생 조건 |
 | --- | --- | --- |
 | 401 | Unauthenticated | 유효한 Bearer 토큰이 없거나 만료된 경우 |
-| 422 | Unprocessable Entity | 요청 파라미터가 검증 규칙을 위반한 경우 (`error.errors` 에 필드별 메시지) |
+| 403 | Forbidden | query 파라미터 `permission` 이 지정됐고 현재 사용자가 해당 권한을 갖지 못한 경우 — `{"error":{"message":"이미지 업로드 권한이 없습니다."}}` |
+| 422 | Unprocessable Entity | 검증 규칙 위반 (`upload` 누락 / 파일 아님 / 이미지 아님 / 허용 MIME 아님 / 용량 초과). 응답은 Laravel 기본 `errors` 형식이 아니라 CKEditor 규격 `{"error":{"message":"<첫 번째 오류 메시지>"}}` |
+| 500 | Internal Server Error | 스토리지 저장 또는 업로드 기록 생성 중 예외 발생 — `{"error":{"message":"이미지 업로드에 실패했습니다."}}` |
 
 <!-- @generated:end -->
 
