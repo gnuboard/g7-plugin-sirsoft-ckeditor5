@@ -64,6 +64,7 @@ Content-Type: application/octet-stream
 CKEditor5 의 SimpleUploadAdapter 가 에디터에 드롭/붙여넣은 이미지를 업로드하는 관리자 엔드포인트다. 컨트롤러가 `AdminBaseController` 를 상속하므로 실제 인증은 `auth:sanctum` **에 더해 관리자(admin) 미들웨어**가 적용된다(생성기 표기는 `auth:sanctum` 만 노출).
 
 - **응답 형식이 표준 envelope 가 아니다.** SimpleUploadAdapter 규격상 성공 시 HTTP 201 + 최상위 `{"url": "..."}`, 실패 시 4xx/5xx + `{"error": {"message": "..."}}` 를 반환한다. `ResponseHelper` 를 쓰지 않으므로 `data`/`success` 필드가 없다.
+  이 규격은 우리 코드가 정한 것이 아니다 — 응답을 파싱하는 주체가 CDN 으로 로드되는 CKEditor5 43.3.1 의 `SimpleUploadAdapter`(`resources/js/handlers/initEditor.ts` 의 `editorConfig.simpleUpload`)이므로 파싱 규약을 바꿀 수 없다. 컨트롤러의 각 응답 지점에는 이 사유로 `audit:allow response-helper-bypass` 를 명시해 두었으니, envelope 로 감싸는 "수정" 을 하면 에디터의 이미지 업로드가 조용히 실패한다.
 - **요청 파라미터**: multipart body 의 `upload` 필드(이미지 파일 1개). 허용 MIME 은 `jpeg,jpg,png,gif,webp`, 최대 크기는 플러그인 설정 `imageMaxSizeMb`(기본 2MB) 로 동적 결정된다. 검증 실패도 CKEditor 규격(`{"error":{"message":...}}`, HTTP 422)으로 응답한다.
 - **선택 권한 게이트**: query 파라미터 `permission` 이 주어지면, 현재 사용자가 해당 권한을 갖지 못한 경우 403 `{"error":{"message":...}}`. 에디터를 임베드하는 화면이 업로드 권한을 세분화할 때 사용한다.
 - 업로드 성공 시 반환하는 `url` 은 공개 서빙 엔드포인트(`GET /images/{hash}`)의 절대 URL 이다.
