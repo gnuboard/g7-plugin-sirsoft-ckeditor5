@@ -4,6 +4,12 @@
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르며,
 [Semantic Versioning](https://semver.org/lang/ko/)을 준수합니다.
 
+## [1.0.2] - 2026-08-12
+
+### Added
+
+- 에디터 이미지 업로드에 파일 가공 필터 훅 제공 — 확장에서 업로드 이미지를 저장 전에 변환할 수 있습니다.
+
 ## [1.0.1] - 2026-08-10
 
 ### Changed
