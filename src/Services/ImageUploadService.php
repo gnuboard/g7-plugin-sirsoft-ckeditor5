@@ -38,6 +38,9 @@ class ImageUploadService
         // 훅: 이미지 업로드 전 (본인인증 등 확장 지점)
         HookManager::doAction('sirsoft-ckeditor5.image.before_upload', $file, $uploadedBy);
 
+        // 필터 훅 - 파일 데이터 변형 (압축, 리사이즈 등 확장 포인트)
+        $file = HookManager::applyFilters('sirsoft-ckeditor5.image.filter_upload_file', $file);
+
         $extension = $file->guessExtension() ?? $file->getClientOriginalExtension();
         $storedFilename = Str::uuid().'.'.$extension;
         $path = date('Y/m/d').'/'.$storedFilename;
