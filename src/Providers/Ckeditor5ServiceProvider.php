@@ -23,7 +23,19 @@ class Ckeditor5ServiceProvider extends BasePluginServiceProvider
     ];
 
     protected array $storageServices = [
-        ImageUploadService::class,
         ImageServeService::class,
+    ];
+
+    /**
+     * 카테고리별 StorageInterface가 필요한 서비스 매핑 (클래스 ⇒ 카테고리)
+     *
+     * 업로드 서비스는 getStorageDiskFor('images') 가 결정한 디스크(공개 자산 디스크
+     * 설정 반영)를 주입받아, put/getDisk() 행 기록이 자동으로 카테고리 디스크를 따릅니다.
+     * 서빙 서비스는 행 storage_disk 기준 withDisk() 를 쓰므로 기본 주입을 유지합니다.
+     *
+     * @var array<class-string, string>
+     */
+    protected array $storageCategoryServices = [
+        ImageUploadService::class => 'images',
     ];
 }
