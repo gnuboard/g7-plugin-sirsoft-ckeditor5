@@ -3,8 +3,12 @@
 namespace Plugins\Sirsoft\Ckeditor5\Providers;
 
 use App\Extension\BasePluginServiceProvider;
+use Plugins\Sirsoft\Ckeditor5\Console\Commands\PruneUnusedImagesCommand;
+use Plugins\Sirsoft\Ckeditor5\Repositories\Contracts\ImageReferenceSourceRepositoryInterface;
 use Plugins\Sirsoft\Ckeditor5\Repositories\Contracts\ImageUploadRepositoryInterface;
+use Plugins\Sirsoft\Ckeditor5\Repositories\ImageReferenceSourceRepository;
 use Plugins\Sirsoft\Ckeditor5\Repositories\ImageUploadRepository;
+use Plugins\Sirsoft\Ckeditor5\Services\ImageCleanupService;
 use Plugins\Sirsoft\Ckeditor5\Services\ImageServeService;
 use Plugins\Sirsoft\Ckeditor5\Services\ImageUploadService;
 
@@ -20,10 +24,12 @@ class Ckeditor5ServiceProvider extends BasePluginServiceProvider
 
     protected array $repositories = [
         ImageUploadRepositoryInterface::class => ImageUploadRepository::class,
+        ImageReferenceSourceRepositoryInterface::class => ImageReferenceSourceRepository::class,
     ];
 
     protected array $storageServices = [
         ImageServeService::class,
+        ImageCleanupService::class,
     ];
 
     /**
@@ -38,4 +44,18 @@ class Ckeditor5ServiceProvider extends BasePluginServiceProvider
     protected array $storageCategoryServices = [
         ImageUploadService::class => 'images',
     ];
+
+    /**
+     * 플러그인 부팅 — 콘솔 실행 시 정리 커맨드를 등록합니다.
+     */
+    public function boot(): void
+    {
+        parent::boot();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                PruneUnusedImagesCommand::class,
+            ]);
+        }
+    }
 }
