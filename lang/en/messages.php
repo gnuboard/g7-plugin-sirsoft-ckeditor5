@@ -20,8 +20,10 @@ return [
         'ids_invalid' => 'Some of the selected images no longer exist. Refresh the list and select again.',
         'deleted' => 'The image has been deleted.',
         'bulk_deleted' => 'Deleted :deleted selected image(s).',
+        'bulk_partially_deleted' => 'Deleted :deleted of the selected images; :failed could not be deleted and remain in the list.',
     ],
     'cleanup' => [
         'retention_disabled' => 'The retention period is less than 1 day, so no cleanup was performed.',
+        'sources_incomplete' => 'Unreferenced-image cleanup was skipped because an inactive module may hide content references. Activate or remove the module, then run again.',
     ],
 ];

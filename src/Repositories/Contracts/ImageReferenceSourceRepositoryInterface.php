@@ -29,4 +29,17 @@ interface ImageReferenceSourceRepositoryInterface
      * @return bool 하나라도 등장하면 true
      */
     public function containsAnyToken(string $table, array $columns, array $tokens): bool;
+
+    /**
+     * 지정 소스에 등장하는 토큰들을 한 번의 순회로 찾아 반환합니다.
+     *
+     * 토큰별로 LIKE 전체 스캔을 반복하면 비용이 (토큰 수 × 테이블 크기) 로 커진다 —
+     * 일괄 판정(관리 화면 미참조 필터·prune)은 이 메서드로 소스당 1회 순회만 수행한다.
+     *
+     * @param  string  $table  테이블명 (프리픽스 제외)
+     * @param  array<int, string>  $columns  검사할 컬럼 목록
+     * @param  array<int, string>  $tokens  판정 토큰
+     * @return array<int, string> 소스에 등장하는 토큰 목록 (부분집합)
+     */
+    public function findTokensInSource(string $table, array $columns, array $tokens): array;
 }

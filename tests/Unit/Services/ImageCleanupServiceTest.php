@@ -274,6 +274,7 @@ class ImageCleanupServiceTest extends PluginTestCase
         $upload = $this->makeUpload('777777777777', 'locked.png');
 
         $storage = \Mockery::mock(StorageInterface::class);
+        $storage->shouldReceive('getDisk')->andReturn('local');
         $storage->shouldReceive('withDisk')->andReturnSelf();
         $storage->shouldReceive('exists')->andReturnTrue();
         $storage->shouldReceive('delete')->andReturnFalse();

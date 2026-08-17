@@ -36,10 +36,26 @@ class ImageCleanupService
      * @param  int  $days  보존기간(일)
      * @param  int  $limit  한 회차에 스캔할 최대 후보 수
      * @param  bool  $dryRun  true 면 판정만 하고 삭제하지 않음
-     * @return array{scanned: int, referenced: int, deleted: int, failed: int, items: array<int, array<string, mixed>>}
+     * @return array{scanned: int, referenced: int, deleted: int, failed: int, items: array<int, array<string, mixed>>, skipped_reason?: string}
      */
     public function pruneUnused(int $days, int $limit, bool $dryRun = false): array
     {
+        // 비활성 모듈이 있으면 그 모듈이 등록했을 참조 소스가 이번 판정에 빠져 있을 수
+        // 있다 — "미참조" 판정을 신뢰할 수 없으므로 실삭제 회차를 통째로 건너뛴다.
+        // (dry-run 은 삭제가 없으므로 판정 미리보기 용도로 계속 허용한다.)
+        if (! $dryRun && $this->scanner->hasPotentiallyMissingSources()) {
+            Log::warning('CKEditor5 미참조 정리 건너뜀 — 비활성 모듈이 있어 참조 소스가 불완전할 수 있습니다.');
+
+            return [
+                'scanned' => 0,
+                'referenced' => 0,
+                'deleted' => 0,
+                'failed' => 0,
+                'items' => [],
+                'skipped_reason' => 'sources_incomplete',
+            ];
+        }
+
         $threshold = Carbon::now()->subDays($days);
         $candidates = $this->repository->findOlderThan($threshold, $limit);
 
@@ -51,8 +67,12 @@ class ImageCleanupService
             'items' => [],
         ];
 
+        // 행별 isReferenced 반복 대신 일괄 판정 — 소스당 1회 순회로 비용을 고정한다.
+        $referencedMap = $this->scanner->mapReferenced($candidates);
+
         foreach ($candidates as $upload) {
-            if ($this->scanner->isReferenced($upload)) {
+            // 판정 누락 행은 안전 방향(참조됨)으로 본다.
+            if ($referencedMap[(int) $upload->id] ?? true) {
                 $result['referenced']++;
 
                 continue;
@@ -98,8 +118,22 @@ class ImageCleanupService
             return $this->repository->delete($upload);
         }
 
+        // 행 disk 가 더 이상 등록돼 있지 않으면(공급 플러그인 비활성 등) withDisk 가
+        // InvalidArgumentException 을 던져 삭제/일괄삭제/prune 루프 전체가 500 으로
+        // 중단된다 — ImageServeService::serve 와 동일하게 존재 검증 후 폴백한다.
         $disk = (string) ($upload->storage_disk ?? '');
-        $storage = $disk !== '' ? $this->storage->withDisk($disk) : $this->storage;
+        $useRowDisk = $disk !== ''
+            && $disk !== $this->storage->getDisk()
+            && config("filesystems.disks.{$disk}") !== null;
+
+        if ($disk !== '' && ! $useRowDisk && $disk !== $this->storage->getDisk()) {
+            Log::warning('CKEditor5 업로드의 저장 disk 가 미등록 상태 — 기본 스토리지로 폴백해 정리를 시도합니다.', [
+                'id' => $upload->id,
+                'disk' => $disk,
+            ]);
+        }
+
+        $storage = $useRowDisk ? $this->storage->withDisk($disk) : $this->storage;
 
         if (! $storage->exists($category, $relativePath)) {
             // 파일이 이미 없는 고아 레코드 — 재시도 루프를 만들지 않도록 레코드를 정리한다.

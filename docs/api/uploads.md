@@ -68,6 +68,7 @@ Authorization: Bearer {YOUR_TOKEN}
 | pagination.to | integer\|null | `3` | 현재 페이지 마지막 항목 순번 (비어 있으면 null) |
 | meta.scan_limited | boolean | `false` | 참조 상태 필터가 스캔 윈도우 상한에 걸렸는지. true 면 그보다 오래된 이미지는 목록에 포함되지 않는다 |
 | meta.scan_window | integer | `500` | 참조 상태 필터가 훑는 최신 업로드 건수 상한 |
+| meta.reference_sources_incomplete | boolean | `false` | 설치돼 있으나 비활성인 모듈이 있어 참조 판정이 불완전할 수 있는지. true 면 그 모듈 콘텐츠에서만 쓰이는 이미지가 「미참조」로 오판될 수 있으므로 화면은 경고를 표시해야 한다 |
 
 **응답 예시**
 
@@ -100,7 +101,8 @@ Authorization: Bearer {YOUR_TOKEN}
         },
         "meta": {
             "scan_limited": false,
-            "scan_window": 500
+            "scan_window": 500,
+            "reference_sources_incomplete": false
         }
     }
 }
@@ -250,4 +252,4 @@ Content-Type: application/json
 관리 화면에서 체크한 이미지를 한 번에 삭제한다.
 
 - 선택 범위는 **화면에 보이는 페이지**로 한정된다(화면 계약). 검색·필터·페이지 이동으로 목록에서 빠진 행의 선택이 남아 대상에 실리면, 운영자가 보지도 체크하지도 않은 파일이 지워지기 때문이다.
-- 일부만 실패한 경우 요청 자체는 성공(200)으로 응답하고 `failed` 로 보고한다. 전부 실패한 경우에만 500 이다 — 부분 성공을 실패로 되돌릴 방법이 없기 때문이다.
+- 일부만 실패한 경우 요청 자체는 성공(200)으로 응답하고 `failed` 로 보고하며, 응답 메시지도 "N건 삭제, M건 실패" 형태(`messages.uploads.bulk_partially_deleted`)로 실패 사실을 함께 안내한다. 전부 실패한 경우에만 500 이다 — 부분 성공을 실패로 되돌릴 방법이 없기 때문이다.

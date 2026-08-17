@@ -74,6 +74,13 @@ class PruneUnusedImagesCommand extends Command
 
         $result = $this->cleanupService->pruneUnused($days, $limit, $isDryRun);
 
+        // 판정 불가로 건너뛴 회차 — "정리 완료(0건)" 로 보이면 운영자가 원인을 모른다.
+        if (($result['skipped_reason'] ?? null) === 'sources_incomplete') {
+            $this->warn(__('sirsoft-ckeditor5::messages.cleanup.sources_incomplete'));
+
+            return Command::SUCCESS;
+        }
+
         if ($isDryRun) {
             $this->renderDryRun($result, $days);
 

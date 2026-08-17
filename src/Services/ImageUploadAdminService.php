@@ -68,6 +68,7 @@ class ImageUploadAdminService
                 'to' => $paginator->lastItem(),
             ],
             'scan_limited' => false,
+            'reference_sources_incomplete' => false,
         ];
     }
 
@@ -133,6 +134,15 @@ class ImageUploadAdminService
             ->filter(fn (Ckeditor5ImageUpload $upload) => (bool) $upload->referenced === $wantReferenced)
             ->values();
 
+        // 스캔 윈도우는 최신순 고정으로 확보하지만, 화면이 요청한 정렬(검증 완료 값)은
+        // 윈도우 안에서 그대로 적용한다 — 무시하면 "파일 크기순 + 미참조" 조합이
+        // 오류 없이 최신순으로만 나와 정렬이 동작하는 것처럼 보인다.
+        $sortBy = (string) ($filters['sort_by'] ?? 'created_at');
+        $sortDesc = strtolower((string) ($filters['sort_order'] ?? 'desc')) !== 'asc';
+        $matched = $matched
+            ->sortBy([[$sortBy, $sortDesc ? 'desc' : 'asc'], ['id', 'desc']])
+            ->values();
+
         $total = $matched->count();
         $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
         $currentPage = max(1, min($page, $lastPage));
@@ -149,6 +159,9 @@ class ImageUploadAdminService
                 'to' => $items->isEmpty() ? null : ($currentPage - 1) * $perPage + $items->count(),
             ],
             'scan_limited' => $scanLimited,
+            // 비활성 모듈이 있으면 그 모듈의 콘텐츠가 판정에서 빠져 "미참조" 가
+            // 신뢰 불가다 — 화면이 경고를 표시할 수 있도록 메타로 알린다.
+            'reference_sources_incomplete' => $this->scanner->hasPotentiallyMissingSources(),
         ];
     }
 

@@ -40,7 +40,8 @@
                 "button": "Delete",
                 "confirm_title": "Delete this image?",
                 "confirm_message": "The image file and its record will both be deleted. This cannot be undone.",
-                "success": "The image has been deleted."
+                "success": "The image has been deleted.",
+                "failed": "Failed to delete the image."
             },
             "bulk_delete": {
                 "button": "Delete selected",

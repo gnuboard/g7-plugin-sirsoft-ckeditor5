@@ -2,6 +2,8 @@
 
 namespace Plugins\Sirsoft\Ckeditor5\Services;
 
+use App\Contracts\Repositories\ModuleRepositoryInterface;
+use App\Enums\ExtensionStatus;
 use App\Extension\HookManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -56,10 +58,30 @@ class ImageReferenceScanService
 
     /**
      * @param  ImageReferenceSourceRepositoryInterface  $sourceRepository  참조 소스 조회 리포지토리
+     * @param  ModuleRepositoryInterface  $moduleRepository  모듈 상태 조회 리포지토리 (소스 불완전 감지)
      */
     public function __construct(
-        protected ImageReferenceSourceRepositoryInterface $sourceRepository
+        protected ImageReferenceSourceRepositoryInterface $sourceRepository,
+        protected ModuleRepositoryInterface $moduleRepository
     ) {}
+
+    /**
+     * 참조 소스가 불완전할 수 있는 상태인지 판정합니다.
+     *
+     * 참조 소스는 **활성** 모듈이 훅으로 등록한다 — 설치돼 있으나 비활성인 모듈이 있으면
+     * 그 모듈 콘텐츠(게시글 본문 등)가 이번 판정에 빠져, 실제로 쓰이는 이미지가
+     * "미참조" 로 오판된다(fail-open). 삭제(uninstalled)는 콘텐츠도 함께 정리되는
+     * 상태이므로 대상이 아니다.
+     *
+     * @return bool 비활성 설치 모듈이 하나라도 있으면 true
+     */
+    public function hasPotentiallyMissingSources(): bool
+    {
+        // audit:allow query-unbounded-get reason: modules 는 설치된 확장 수에 묶인 설정성 테이블 — 행 수가 데이터 증가에 비례하지 않는다
+        return $this->moduleRepository->getAll()
+            ->contains(fn ($module) => ! $module->isActive()
+                && $module->status !== ExtensionStatus::Uninstalled->value);
+    }
 
     /**
      * 참조 스캔 대상 소스 목록을 반환합니다.
@@ -113,15 +135,61 @@ class ImageReferenceScanService
     /**
      * 업로드 목록의 참조 여부를 일괄 판정합니다.
      *
+     * 행별로 isReferenced 를 반복하면 비용이 (행 수 × 소스 수 × LIKE 전체 스캔) 으로
+     * 커진다 — 여기서는 전 행의 토큰을 모아 소스당 1회 순회로 등장 토큰을 수집한다
+     * (비용 상한: 소스 크기 합 1회 + 조기 종료).
+     *
      * @param  Collection<int, Ckeditor5ImageUpload>|iterable<Ckeditor5ImageUpload>  $uploads  업로드 목록
      * @return array<int, bool> [업로드 ID => 참조 여부]
      */
     public function mapReferenced(iterable $uploads): array
     {
         $map = [];
+        $tokenOwners = [];
 
         foreach ($uploads as $upload) {
-            $map[(int) $upload->id] = $this->isReferenced($upload);
+            $id = (int) $upload->id;
+            $tokens = $this->buildTokens($upload);
+
+            if ($tokens === []) {
+                // 판정 토큰을 만들 수 없는 행은 안전 방향(참조됨)으로 본다.
+                $map[$id] = true;
+
+                continue;
+            }
+
+            $map[$id] = false;
+
+            foreach ($tokens as $token) {
+                $tokenOwners[$token][] = $id;
+            }
+        }
+
+        if ($tokenOwners === []) {
+            return $map;
+        }
+
+        $pending = $tokenOwners;
+
+        foreach ($this->getReferenceSources() as $source) {
+            if ($pending === []) {
+                break;
+            }
+
+            // PHP 배열 키는 순수 숫자 토큰을 int 로 접으므로 문자열로 복원해 넘긴다.
+            $foundTokens = $this->sourceRepository->findTokensInSource(
+                $source['table'],
+                $source['columns'],
+                array_map('strval', array_keys($pending))
+            );
+
+            foreach ($foundTokens as $token) {
+                foreach ($pending[$token] ?? [] as $id) {
+                    $map[$id] = true;
+                }
+
+                unset($pending[$token]);
+            }
         }
 
         return $map;

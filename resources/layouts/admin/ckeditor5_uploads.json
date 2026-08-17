@@ -512,7 +512,7 @@
                         "type": "composite",
                         "name": "DataGrid",
                         "props": {
-                            "data": "{{ckeditor5Uploads?.data?.data}}",
+                            "data": "{{ckeditor5Uploads?.data?.data ?? []}}",
                             "pagination": true,
                             "serverSidePagination": true,
                             "serverCurrentPage": "{{ckeditor5Uploads?.data?.pagination?.current_page ?? 1}}",
@@ -849,7 +849,7 @@
                                                         "handler": "toast",
                                                         "params": {
                                                             "type": "error",
-                                                            "message": "{{error.message}}"
+                                                            "message": "{{error.message ?? '$t:sirsoft-ckeditor5.admin.uploads.delete.failed'}}"
                                                         }
                                                     }
                                                 ],
@@ -1020,7 +1020,7 @@
                                                         "handler": "toast",
                                                         "params": {
                                                             "type": "error",
-                                                            "message": "{{error.message}}"
+                                                            "message": "{{error.message ?? '$t:sirsoft-ckeditor5.admin.uploads.delete.failed'}}"
                                                         }
                                                     }
                                                 ],

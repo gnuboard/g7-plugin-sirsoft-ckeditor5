@@ -50,6 +50,7 @@ class ImageUploadAdminController extends AdminBaseController
             'meta' => [
                 'scan_limited' => $result['scan_limited'],
                 'scan_window' => ImageUploadAdminService::SCAN_WINDOW,
+                'reference_sources_incomplete' => $result['reference_sources_incomplete'] ?? false,
             ],
         ]);
     }
@@ -87,6 +88,17 @@ class ImageUploadAdminController extends AdminBaseController
 
         if ($result['deleted'] === 0 && $result['failed'] > 0) {
             return ResponseHelper::error('messages.uploads.file_delete_failed', 500, $result, domain: 'sirsoft-ckeditor5');
+        }
+
+        // 부분 실패를 성공 문구("N건 삭제")로 접으면 운영자가 남은 파일을 모른다 —
+        // 실패 건수를 문구에 함께 싣는다 (실패 상세는 data 페이로드).
+        if ($result['failed'] > 0) {
+            return ResponseHelper::success(
+                'messages.uploads.bulk_partially_deleted',
+                $result,
+                messageParams: ['deleted' => $result['deleted'], 'failed' => $result['failed']],
+                domain: 'sirsoft-ckeditor5',
+            );
         }
 
         return ResponseHelper::success(
