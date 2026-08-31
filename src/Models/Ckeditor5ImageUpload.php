@@ -5,7 +5,7 @@ namespace Plugins\Sirsoft\Ckeditor5\Models;
 use App\Contracts\Extension\StorageInterface;
 use App\Extension\Storage\PluginStorageDriver;
 use App\Models\User;
-use App\Support\PublicAssetDisk;
+use App\Support\AssetUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -51,8 +51,6 @@ class Ckeditor5ImageUpload extends Model
 
     /**
      * 모델 부트 메서드
-     *
-     * @return void 반환값 없음
      */
     protected static function boot(): void
     {
@@ -96,7 +94,10 @@ class Ckeditor5ImageUpload extends Model
      */
     public function getDownloadUrlAttribute(): string
     {
-        return $this->resolveDirectUrl() ?? '/api/plugins/sirsoft-ckeditor5/images/'.$this->hash;
+        // 폴백 주소에는 마운트 접두사를 붙인다 — 직접 URL 은 스토리지 드라이버가 만들어
+        // 이미 접두사를 갖지만 이 손조립은 갖지 않았다. 그 값이 본문 HTML 에 굳어 저장되므로
+        // 하위 폴더 배치에서는 나중에 고쳐도 옛 글이 계속 깨진 주소를 갖는다.
+        return $this->resolveDirectUrl() ?? AssetUrl::basePrefix().'/api/plugins/sirsoft-ckeditor5/images/'.$this->hash;
     }
 
     /**
@@ -122,11 +123,6 @@ class Ckeditor5ImageUpload extends Model
             return null;
         }
 
-        // 「공개 디스크로 내보낼 확장자」 밖의 파일은 직접 주소로 내보내지 않는다 — 서버를 거치는 주소로.
-        if (! PublicAssetDisk::exportsExtension(pathinfo($relativePath, PATHINFO_EXTENSION))) {
-            return null;
-        }
-
         $storage = self::$storageByDisk[$disk] ??= new PluginStorageDriver('sirsoft-ckeditor5', $disk);
 
         return $storage->url($category, $relativePath);
@@ -134,8 +130,6 @@ class Ckeditor5ImageUpload extends Model
 
     /**
      * 행 disk 드라이버 memoize 캐시를 비웁니다 (테스트 격리용).
-     *
-     * @return void 반환값 없음
      */
     public static function flushStorageCache(): void
     {
